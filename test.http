@@ -1,0 +1,9 @@
+POST https://storemanagerorders.politeflower-b07fe770.canadacentral.azurecontainerapps.io/order
+Content-Type: application/json
+
+{
+    "StoreId": "ST-USA-TX-SAT-LEONS",
+    "Units": 55,
+    "Revenue": 100.00
+}
+

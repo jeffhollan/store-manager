@@ -43,12 +43,14 @@ az redis create --name storemanager6 --resource-group $RESOURCE_GROUP --location
 ## Pick up Redis host name and key from Azure portal and update the components.yaml file. The key is Redis password.
 
 # cd to azure-container-apps
+# sed -i '' 's|name: statestore|name: statestore-a|g' ./components/components.yaml
+# sed -i '' 's|name: pubsub|name: pubsub-a|g' ./components/components.yaml
 # Create Actors App
 az containerapp create \
   --name storemanageractors \
   --resource-group $RESOURCE_GROUP \
   --environment $CONTAINERAPPS_ENVIRONMENT \
-  --image khaledhikmat/store-manager-actors:1.0 \
+  --image jeffhollan.azurecr.io/store-manager-actors:1.0 \
   --target-port 6000 \
   --ingress 'external' \
   --min-replicas 1 \
@@ -58,12 +60,15 @@ az containerapp create \
   --dapr-app-id storemanageractors \
   --dapr-components ./components/components.yaml
 
+# sed -i '' 's|name: statestore-a|name: statestore-b|g' ./components/components.yaml
+# sed -i '' 's|name: pubsub-a|name: pubsub-b|g' ./components/components.yaml
+
 # Create Orders App
 az containerapp create \
   --name storemanagerorders \
   --resource-group $RESOURCE_GROUP \
   --environment $CONTAINERAPPS_ENVIRONMENT \
-  --image khaledhikmat/store-manager-orders:1.0 \
+  --image jeffhollan.azurecr.io/store-manager-orders:1.0 \
   --target-port 6001 \
   --ingress 'external' \
   --min-replicas 1 \
@@ -73,12 +78,14 @@ az containerapp create \
   --dapr-app-id storemanagerorders \
   --dapr-components ./components/components.yaml
 
+# sed -i '' 's|name: statestore-b|name: statestore-c|g' ./components/components.yaml
+# sed -i '' 's|name: pubsub-b|name: pubsub-c|g' ./components/components.yaml
 # Create Entities App
 az containerapp create \
   --name storemanagerentities \
   --resource-group $RESOURCE_GROUP \
   --environment $CONTAINERAPPS_ENVIRONMENT \
-  --image khaledhikmat/store-manager-entities:1.0 \
+  --image jeffhollan.azurecr.io/store-manager-entities:1.0 \
   --target-port 6002 \
   --ingress 'external' \
   --min-replicas 1 \
@@ -87,6 +94,9 @@ az containerapp create \
   --dapr-app-port 6002 \
   --dapr-app-id storemanagerentities \
   --dapr-components ./components/components.yaml
+
+# sed -i '' 's|name: statestore-c|name: statestore|g' ./components/components.yaml
+# sed -i '' 's|name: pubsub-c|name: pubsub|g' ./components/components.yaml
 
 az monitor log-analytics query \
   --workspace $LOG_ANALYTICS_WORKSPACE_CLIENT_ID \
@@ -106,33 +116,3 @@ az monitor log-analytics query \
 az monitor log-analytics query --workspace $LOG_ANALYTICS_WORKSPACE_CLIENT_ID --analytics-query "ContainerAppConsoleLogs_CL | where ContainerAppName_s == 'storemanagerentities' | project ContainerAppName_s, Log_s, TimeGenerated | take 100" --out table > entities.log
 az monitor log-analytics query --workspace $LOG_ANALYTICS_WORKSPACE_CLIENT_ID --analytics-query "ContainerAppConsoleLogs_CL | where ContainerAppName_s == 'storemanagerorders' | project ContainerAppName_s, Log_s, TimeGenerated | take 100" --out table > orders.log
 az monitor log-analytics query --workspace $LOG_ANALYTICS_WORKSPACE_CLIENT_ID --analytics-query "ContainerAppConsoleLogs_CL | where ContainerAppName_s == 'storemanageractors' | project ContainerAppName_s, Log_s, TimeGenerated | take 100" --out table > actors.log
-
-# Create Hello Node App
-az containerapp create \
-  --name node-hello \
-  --resource-group $RESOURCE_GROUP \
-  --environment $CONTAINERAPPS_ENVIRONMENT \
-  --image khaledhikmat/node-hello-world-api:v1.0.3 \
-  --target-port 8080 \
-  --ingress 'external' \
-  --min-replicas 1 \
-  --max-replicas 1
-
-Now this works - hitting the revision:
-GET https://node-hello--lfg1i8s.ambitiousdesert-ef67c030.canadacentral.azurecontainerapps.io/health/liveness
-GET https://node-hello--lfg1i8s.ambitiousdesert-ef67c030.canadacentral.azurecontainerapps.io/health/readiness
-OR hitting the app:
-https://node-hello.ambitiousdesert-ef67c030.canadacentral.azurecontainerapps.io/health/liveness
-
-# Update Hello Node App to use DAPR
-az containerapp update \
-  --name node-hello \
-  --resource-group $RESOURCE_GROUP \
-  --image khaledhikmat/node-hello-world-api:v1.0.3 \
-  --target-port 8080 \
-  --ingress 'external' \
-  --min-replicas 1 \
-  --max-replicas 1 \
-  --enable-dapr \
-  --dapr-app-port 8080 \
-  --dapr-app-id node-hello
